@@ -3,6 +3,9 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 <title>Explain Git with D3</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.1.0/lodash.min.js"></script>
+
 <script data-main="js/main" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.4/require.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/2.1.0/normalize.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/1140/2.0/1140.css">
@@ -308,14 +311,13 @@
 
 <script type="text/javascript">
 require(['explaingit'], function (explainGit) {
+
     var examples = {
         'commit': {
             name: 'Commit',
-            height: 200,
-            baseLine: 0.4,
-            commitData: [
-                {id: 'e137e9b', tags: ['master']}
-            ],
+            height: 800,
+            baseLine: 0.5,
+            commitData: [],
             initialMessage: 'Type git commit a few times.'
         },
         'branch': {
@@ -521,10 +523,55 @@ require(['explaingit'], function (explainGit) {
         }
     };
 
+
+    function mapCommits(data, nextPage){
+        
+        var mappedCommits = _.map(data, function(commit){
+          return {
+            id: commit.sha,
+            parent: commit.parents[0].sha,
+            date: Date.parse(commit.commit.author.date)
+          }
+        });
+        examples.commit.commitData = examples.commit.commitData.concat(mappedCommits);
+
+        if(data.length > 0 && nextPage){
+           get(nextPage, mapCommits);
+        }
+        else{
+          examples.commit.commitData = _.sortBy(examples.commit.commitData, 'date');
+          console.log(examples.commit.commitData);
+          delete examples.commit.commitData[0].parent;
+          init();
+        }
+        
+    }
+
+  function get(url, callback){
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4) {
+                var nextPage = (/<(.*)>; rel="next"/.exec(xhr.getResponseHeader('link')) || {1: undefined })[1];
+
+                var data = JSON.parse(xhr.responseText);
+                console.log('got data', url, data);
+                callback(data, nextPage);
+            }
+        }
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader("Content-Type","application/json");
+        xhr.setRequestHeader("Authorization","token 55027bf60617c62f86b014ea67ea9bf56c6c42b8");
+        xhr.send(null);
+    }
+
+    function loadData(){
+       get('https://api.github.com/repos/NorskRikstoto/Etoto/commits?since=2015-01-18', mapCommits)
+    }
+
     window.addEventListener('hashchange', open, false);
-    window.addEventListener('load', open, false);
+    window.addEventListener('load', loadData, false);
     
-    function open() {
+    function init() {
         var hash = window.location.hash.substr(1),
             linkId = 'open-' + hash,
             example = examples[hash];

@@ -163,7 +163,7 @@ span.cmd {
 circle.commit {
     fill: #EEEEEE;
     stroke: #888888;
-    stroke-width: 3;
+    stroke-width: 1;
 }
 
 circle.commit.checked-out {
@@ -193,7 +193,7 @@ circle.commit.branchless {
 
 .commit-pointer {
     stroke: #666;
-    stroke-width: 4;
+    stroke-width: 2;
 }
 
 .merge-pointer {
