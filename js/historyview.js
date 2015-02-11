@@ -164,7 +164,7 @@ define(['d3'], function () {
             diffY = parent.cy - commit.cy,
             length = Math.sqrt((diffX * diffX) + (diffY * diffY));
 
-        return endCX + (view.pointerMargin * 1.2 * (diffX / length));
+        return endCX + (view.pointerMargin * 1 * (diffX / length));
     };
 
     py2 = function (commit, view, pp) {
@@ -191,7 +191,7 @@ define(['d3'], function () {
         selection.attr('x', function (d) {
             return d.cx;
         }).attr('y', function (d) {
-            return d.cy + view.commitRadius + 14;
+            return d.cy + view.commitRadius;
         });
     };
 
@@ -206,12 +206,28 @@ define(['d3'], function () {
         }
 
         if (commitCY < (view.baseLine)) {
-            return commitCY - 45 - (tagIndex * 25);
+            return commitCY - 34 - (tagIndex * 25);
         } else {
-            return commitCY + 40 + (tagIndex * 25);
+            return commitCY + 20 + (tagIndex * 25);
         }
     };
 
+    function addCommits(view, commits){
+        var index = 0;
+        var self = this;
+        for (var i = commits.length - 1; i >= 0; i--) {
+            var c = commits[i];
+            setTimeout(function(){
+                if(view.branches.indexOf(c.tags[0]) == -1){
+                    view.branch(c.tags[0]);
+
+                }
+                view.checkout(c.tags[0]);
+                view.commit(c);
+            }, index*1000);
+            index++;
+        };
+    }
     /**
      * @class HistoryView
      * @constructor
@@ -227,8 +243,10 @@ define(['d3'], function () {
         }
 
         this.name = config.name || 'UnnamedHistoryView';
+
         this.commitData = commitData;
 
+      
         this.branches = [];
         this.currentBranch = config.currentBranch || 'master';
 
@@ -249,6 +267,9 @@ define(['d3'], function () {
             cx: -(this.commitRadius * 2),
             cy: this.baseLine
         };
+          
+       // addCommits(this, commitData);
+
     }
 
     HistoryView.generateId = function () {
@@ -444,7 +465,7 @@ define(['d3'], function () {
             this._renderCircles();
             this._renderPointers();
             this._renderMergePointers();
-            this._renderIdLabels();
+            //this._renderIdLabels();
             this._resizeSvg();
             this.checkout(this.currentBranch);
         },
@@ -467,7 +488,7 @@ define(['d3'], function () {
                 });
 
             existingCircles.transition()
-                .duration(500)
+                .duration(200)
                 .call(fixCirclePosition);
 
             newCircles = existingCircles.enter()
@@ -482,8 +503,8 @@ define(['d3'], function () {
                 .call(fixCirclePosition)
                 .attr('r', 1)
                 .transition()
-                .duration(500)
-                .attr('r', this.commitRadius);
+                .duration(200)
+                .attr('r', 10);
 
         },
 
@@ -499,7 +520,7 @@ define(['d3'], function () {
                 });
 
             existingPointers.transition()
-                .duration(500)
+                .duration(200)
                 .call(fixPointerStartPosition, view)
                 .call(fixPointerEndPosition, view);
 
@@ -512,9 +533,9 @@ define(['d3'], function () {
                 .call(fixPointerStartPosition, view)
                 .attr('x2', function () { return d3.select(this).attr('x1'); })
                 .attr('y2', function () {  return d3.select(this).attr('y1'); })
-                .attr('marker-end', REG_MARKER_END)
+                //.attr('marker-end', REG_MARKER_END)
                 .transition()
-                .duration(500)
+                .duration(200)
                 .call(fixPointerEndPosition, view);
         },
 
@@ -536,7 +557,7 @@ define(['d3'], function () {
                     return view.name + '-' + d.id + '-to-' + d.parent2;
                 });
 
-            existingPointers.transition().duration(500)
+            existingPointers.transition().duration(200)
                 .attr('points', function (d) {
                     var p1 = px1(d, view, 'parent2') + ',' + py1(d, view, 'parent2'),
                         p2 = px2(d, view, 'parent2') + ',' + py2(d, view, 'parent2');
@@ -559,7 +580,7 @@ define(['d3'], function () {
                 })
                 .attr('marker-end', MERGE_MARKER_END)
                 .transition()
-                .duration(500)
+                .duration(200)
                 .attr('points', function (d) {
                     var points = d3.select(this).attr('points').split(' '),
                         x2 = px2(d, view, 'parent2'),
@@ -577,14 +598,14 @@ define(['d3'], function () {
 
             existingLabels = this.commitBox.selectAll('text.id-label')
                 .data(this.commitData, function (d) { return d.id; })
-                .text(function (d) { return d.id + '..'; });
+                .text(function (d) { return d.id.substring(6, 0) + '..'; });
 
             existingLabels.transition().call(fixIdPosition, view);
 
             newLabels = existingLabels.enter()
                 .insert('svg:text', ':first-child')
                 .classed('id-label', true)
-                .text(function (d) { return d.id + '..'; })
+                .text(function (d) { return d.id.substring(6, 0) + '..'; })
                 .call(fixIdPosition, view);
         },
 
@@ -666,7 +687,7 @@ define(['d3'], function () {
 
             existingTags.select('rect')
                 .transition()
-                .duration(500)
+                .duration(200)
                 .attr('y', function (d) { return tagY(d, view); })
                 .attr('x', function (d) {
                     var commit = view.getCommit(d.commit),
@@ -677,7 +698,7 @@ define(['d3'], function () {
 
             existingTags.select('text')
                 .transition()
-                .duration(500)
+                .duration(200)
                 .attr('y', function (d) { return tagY(d, view) + 14; })
                 .attr('x', function (d) {
                     var commit = view.getCommit(d.commit);

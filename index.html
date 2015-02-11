@@ -315,8 +315,11 @@ require(['explaingit'], function (explainGit) {
     var examples = {
         'commit': {
             name: 'Commit',
-            height: 800,
+            height: 500,
             baseLine: 0.5,
+            pointerMargin: 1,
+            commitMargin: 1,
+            commitRadius: 10,
             commitData: [],
             initialMessage: 'Type git commit a few times.'
         },
@@ -524,25 +527,47 @@ require(['explaingit'], function (explainGit) {
     };
 
 
-    function mapCommits(data, nextPage){
+    function mapCommits(data, nextPage, branch, latestSha){
         
-        var mappedCommits = _.map(data, function(commit){
-          return {
+        var mappedCommits = _.chain(data)
+        .filter(function(c){
+            return !_.some(examples.commit.commitData, { id: c.sha });
+        }).map(function(commit){
+          var c = {
             id: commit.sha,
-            parent: commit.parents[0].sha,
             date: Date.parse(commit.commit.author.date)
           }
-        });
+          if(c.id === latestSha){
+            c.tags = [branch];
+          }
+          if(commit.parents[0]){
+            c.parent = commit.parents[0].sha;
+          }
+          if(commit.parents[1]){
+            c.parent2 = commit.parents[1].sha;
+          }
+          return c;
+        }).value();
+
+
         examples.commit.commitData = examples.commit.commitData.concat(mappedCommits);
 
         if(data.length > 0 && nextPage){
-           get(nextPage, mapCommits);
+           get(nextPage, function(data, nextPage){
+              mapCommits(data, nextPage, branch, latestSha);
+           });
         }
         else{
+          branches.splice(branches.indexOf(name), 1);
           examples.commit.commitData = _.sortBy(examples.commit.commitData, 'date');
-          console.log(examples.commit.commitData);
-          delete examples.commit.commitData[0].parent;
-          init();
+          //examples.commit.commitData[examples.commit.commitData.length-1].tags = ['master'];
+
+          if(examples.commit.commitData[0] && examples.commit.commitData[0].parent){
+            delete examples.commit.commitData[0].parent;
+          }
+          if(branches.length == 0){
+            init();
+          }
         }
         
     }
@@ -554,18 +579,33 @@ require(['explaingit'], function (explainGit) {
                 var nextPage = (/<(.*)>; rel="next"/.exec(xhr.getResponseHeader('link')) || {1: undefined })[1];
 
                 var data = JSON.parse(xhr.responseText);
-                console.log('got data', url, data);
                 callback(data, nextPage);
             }
         }
         xhr.open('GET', url, true);
         xhr.setRequestHeader("Content-Type","application/json");
-        xhr.setRequestHeader("Authorization","token 55027bf60617c62f86b014ea67ea9bf56c6c42b8");
+        xhr.setRequestHeader("Authorization","token 19579e568736fb8dea4140576928872010d18143");
         xhr.send(null);
     }
 
+    var branches = []
+
+    function loadCommitsForBranch(name, latestSha){
+      branches.push(name);
+        get('https://api.github.com/repos/NorskRikstoto/Etoto/commits?since=2015-02-09&sha='+name, function(data, nextPage){
+            mapCommits(data, nextPage, name, latestSha);
+        });
+    }
+
+    function loadBranches(data){
+      for (var i = data.length - 1; i >= 0; i--) {
+        var b = data[i];
+        loadCommitsForBranch(b.name, b.commit.sha);      
+      };
+    }
+
     function loadData(){
-       get('https://api.github.com/repos/NorskRikstoto/Etoto/commits?since=2015-01-18', mapCommits)
+      get('https://api.github.com/repos/NorskRikstoto/Etoto/branches', loadBranches);
     }
 
     window.addEventListener('hashchange', open, false);
